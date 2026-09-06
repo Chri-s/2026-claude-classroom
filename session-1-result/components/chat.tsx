@@ -16,14 +16,11 @@ export function Chat({
   threadId: string;
 }) {
   return (
-    // The Inspector is on by default in development, and its <cpk-web-inspector>
-    // host swallows pointer events across the page — including the header's
-    // sign-out button.
-    <CopilotKit
-      runtimeUrl="/api/copilotkit"
-      credentials="include"
-      enableInspector={false}
-    >
+    // The Inspector is on by default in development builds and never loads in a
+    // production one, so `enableInspector` is left unset deliberately;
+    // `showDevConsole` is deprecated and no longer controls it either way.
+    // app/globals.css moves its launcher off the header's sign-out button.
+    <CopilotKit runtimeUrl="/api/copilotkit" credentials="include">
       <CopilotChat
         agentId={agentId}
         threadId={threadId}

@@ -54,8 +54,9 @@ about **working with an agent over time**, in a repo that already exists.
    identity that comes from the server session rather than from the model.
 3. **Context hygiene.** What sits in the context window, what `/compact` and `/clear`
    do to it, and why a fat context costs both money and quality.
-4. **Subagents.** Parallel chores, a fresh-eyes reviewer, and model tiering as a cost
-   lever.
+4. **Delegation.** One prompt to a strong model, which hands the pieces to cheaper
+   models in parallel, one of them behind a different coding harness, and reviews what
+   comes back.
 5. **A custom skill.** The meta-skill and the design skill combine into a skill of your
    own.
 6. **Git workflows and worktrees.** Branches and pull requests for every step, and two
@@ -130,7 +131,7 @@ fixes the caching properly, so leave the restart in place for now.
 
 CopilotKit talks to our route over **AG-UI**, a stream of typed JSON events: the run
 starts, text arrives in deltas, tool calls open and close, the run finishes. You can
-watch it three ways.
+watch it two ways.
 
 - **Network tab.** Filter for `copilotkit`, send a message, and open the `run` request.
   It's a `text/event-stream` response, and every `data:` line is one event. Notice the
@@ -139,20 +140,16 @@ watch it three ways.
   that thinking as its own event type. That is what the "Thought for a few seconds"
   line in the chat is made of.
 - **The Inspector.** CopilotKit ships a debugging panel that is on by default in
-  development. The starter switches it off with `enableInspector={false}` in
-  `components/chat.tsx`. Delete that line by hand. A launcher bubble appears in the
-  top right, and the "View in Inspector" link under every reply opens a panel with the
-  thread, every event, the agent's state, and counters for messages, tool calls, and
-  errors. The tool-call counter reads zero today, and it stops reading zero in step
-  11. Now try the sign-out button. The click lands on the Inspector's host element
-  instead, which is why the starter turns the panel off and why the e2e test would
-  fail with it on. Step 9 fixes that properly.
-- **The VS Code extension.** The CopilotKit extension has an "AG-UI Inspector" command
-  that connects to `http://localhost:3000/api/copilotkit/cpk-debug-events`. Try it. It
-  fails, because our route answers 401 to anything without a session cookie, and the
-  extension has none. Correct behavior for the app, wrong for the tool. Making it work
-  takes two changes and two long agent runs, so it's homework: Appendix B has the
-  prompts.
+  development and never loads in production. The launcher bubble sits under the header
+  on the right, and the "View in Inspector" link under every reply opens a panel with
+  the thread, every event, the agent's state, and counters for messages, tool calls,
+  and errors. The tool-call counter reads zero today, and it stops reading zero in step
+  11. One line in `app/globals.css` moves the launcher down, because CopilotKit anchors
+  it exactly where the header keeps the sign-out button.
+
+CopilotKit's VS Code extension can show the same event stream from the editor, but it
+needs the debug endpoint open to callers without a session and one runtime shared across
+requests. That is a real-project change, so it stays out of today.
 
 ### Claude drives another agent
 
@@ -187,9 +184,8 @@ them are where the learning sits.
   actually receive" decides the debugging, and the inspector answers it in one click.
 
 **Verify:** the app runs from a fork, the changed system prompt shows after a restart,
-and everyone has seen the event stream once. Then put the tree back with
-`git restore components/chat.tsx lib/tutor.ts`, so step 9 starts clean and the agent
-turns the console on properly.
+and everyone has seen the event stream once. Then put the prompt back with
+`git restore lib/tutor.ts`, so step 9 starts clean.
 
 ## Step 9: three fixes in the existing repo
 
@@ -210,12 +206,10 @@ branches the rule anyway.
 
 > **Prompt 9.2**
 >
-> Two developer-experience fixes, development only, production behavior must not
-> change. One: editing the tutor's instructions in lib/tutor.ts should take effect on
-> hot reload without a dev-server restart, while the database connection stays cached.
-> Two: turn the CopilotKit Inspector on in development and make sure its launcher no
-> longer covers the sign-out button; use the copilotkit skills. Keep the suite green
-> and AGENTS.md current. Commit when everything is green.
+> One developer-experience fix, development only, production behavior must not change:
+> editing the tutor's instructions in lib/tutor.ts should take effect on hot reload
+> without a dev-server restart, while the database connection stays cached. Keep the
+> suite green and AGENTS.md current. Commit when everything is green.
 
 > **Prompt 9.3**
 >
@@ -245,26 +239,17 @@ branches the rule anyway.
   `db:migrate` in the tool stream, and for Vitest 5 blocked by Better Auth's stale
   peer range, which the agent solves with a one-package `overrides` entry instead of
   the global `legacy-peer-deps` the old AGENTS.md talked about.
-- **Prompt 9.1 is the long one.** Expect about 70 tool calls. Use them for the
-  teaching points, and if the room gets restless, this is where `/btw` from step 10
-  gets its first outing.
 - **Memory drifts.** AGENTS.md claims an `.npmrc` with `legacy-peer-deps` that the
   repo no longer has, and it calls `vite-tsconfig-paths` deprecated when the package
   is alive and merely redundant next to Vite's own tsconfig path resolution. Both
   entries were true, or believed, when written. The maintenance rule keeps the file
   current on every change, but nothing re-checks the lines a change didn't touch, so
   an explicit "verify every claim" once in a while is part of owning the file.
-- **Fix one is a hot-reload problem, not a Mastra problem.** The `globalThis` cache in
+- **Prompt 9.2 is a hot-reload problem, not a Mastra problem.** The `globalThis` cache in
   `lib/tutor.ts` exists so that a reload doesn't open another libSQL connection. The
   fix keeps the connection cached and rebuilds the cheap part, the agent, on every
   module evaluation in development. Expect the agent to explain that split in its
   summary, and read the summary.
-- **Fix two is measured, not guessed.** Expect the agent to start the dev server, drive
-  it with Playwright, and report the launcher's and the button's pixel boxes before it
-  moves the launcher down with one CSS rule on `cpk-web-inspector`. It may also correct
-  the AGENTS.md line that said the Inspector swallows clicks "across the page", because
-  the measured box is exactly the launcher's. Point that out when it happens: the agent
-  checked the claim before it fixed it, instead of taking the file's word.
 - **Prompt 9.3 is two sentences of intent, and the bug has a real cause.** CopilotKit's
   stylesheet switches to dark on a `.dark` class, and Tailwind's `dark:` variant fires
   on `prefers-color-scheme`. On a dark-preferring browser the page goes black and the
@@ -275,8 +260,7 @@ branches the rule anyway.
 
 **Verify:** `npm test`, `npm run test:e2e`, and `npm run build` are green after each
 prompt. Change the instructions in `lib/tutor.ts` and the next reply reflects it
-without a restart. The Inspector is on and the sign-out button is clickable. The page
-is light. Three commits. Then push them:
+without a restart. The page is light. Three commits. Then push them:
 
 ```bash
 git push
@@ -315,10 +299,10 @@ agent read along the way.
   context is full of failed attempts, so `/clear` and write a better first prompt.
 - **`/btw` for side questions.** An answer to "what does `--turbopack` do again" doesn't
   need to live in the history for the rest of the day.
-- **Subagents are a context firewall.** In step 12 the coordinator asks three subagents
+- **Subagents are a context firewall.** In step 12 the coordinator asks three workers
   to do work that reads a lot of files. Only their summaries come back into the main
-  window. Same idea for research: "use a subagent to find out how CopilotKit scopes
-  thread listings" keeps the file reads out of your context.
+  window. Same idea for research: "use a subagent to find out how CopilotKit persists
+  threads" keeps the file reads out of your context.
 - **Cost follows context.** The per-request price is the whole window, so a fat
   session costs more on every turn, not once. Compacting or clearing cuts that bill on
   every remaining request of the day.
@@ -381,24 +365,16 @@ docker logs mitm     # prints the web UI URL with its token
 The `-t` matters. Without a terminal, Python buffers mitmweb's output, the log stays
 empty, and the UI answers 403 because you never saw the token.
 
-Then point Mastra at the proxy. In `lib/tutor.ts`, the model string becomes a config
-object:
+Then point Mastra at the proxy. `lib/tutor.ts` already reads `OPENROUTER_BASE_URL` and
+passes it to the model router as the base URL, so uncomment the line in `.env`:
 
-```ts
-model: {
-  id: "openrouter/z-ai/glm-5.3-flash",
-  // A custom url switches off the router's own key lookup, so hand the key over.
-  ...(process.env.OPENROUTER_BASE_URL && {
-    url: process.env.OPENROUTER_BASE_URL,
-    apiKey: process.env.OPENROUTER_API_KEY,
-  }),
-},
+```bash
+OPENROUTER_BASE_URL=http://localhost:8090/api/v1
 ```
 
-Add `OPENROUTER_BASE_URL=http://localhost:8090/api/v1` to `.env`. In development the
-agent is rebuilt on the next request, so no restart is needed. Say "I need to read
-chapter 3 and do exercise 5 for tomorrow" and open the mitmweb URL from the log. One
-chat turn is two flows to `POST /api/v1/chat/completions`:
+Since prompt 9.2 the agent is rebuilt on the next request in development, so no restart
+is needed. Say "I need to read chapter 3 and do exercise 5 for tomorrow" and open the
+mitmweb URL from the log. One chat turn is two flows to `POST /api/v1/chat/completions`:
 
 - **The first request** carries `messages` with the system prompt and the student's
   sentence, `tool_choice: "auto"`, and `tools`, which is your three Zod schemas rendered
@@ -414,12 +390,8 @@ chat turn is two flows to `POST /api/v1/chat/completions`:
   "stop"`. `tools` rides along on this request too, because the model may decide it
   needs another call.
 
-Two gotchas. The URL needs `/api/v1`, and the bare origin fails badly: OpenRouter's web
-site answers 200 with an HTML page and the agent dies on a JSON parse error. And if you
-forget `apiKey`, OpenRouter answers 401 and the chat shows a `RUN_ERROR` about missing
-credentials. Commit the switch on `main` when it works, and stop the proxy with
-`docker rm -f mitm`. With `OPENROUTER_BASE_URL` unset, the app talks to OpenRouter
-directly again.
+Afterward, comment the line out again and stop the proxy with `docker rm -f mitm`. With
+`OPENROUTER_BASE_URL` unset, the app talks to OpenRouter directly.
 
 **Teaching points**
 
@@ -460,11 +432,12 @@ directly again.
 **Verify:** the live demo works, the unit tests prove per-user isolation, the default
 e2e suite stays free of LLM calls, and `main` carries the squashed merge.
 
-## Step 12: quality pass with subagents
+## Step 12: quality pass by delegation
 
-**Goal:** leave the repo the way every session should end, clean and tested, with a
-README that matches it, and let a fresh pair of eyes look at the security-relevant
-code.
+**Goal:** leave the repo the way every session should end, with a README that matches
+it and demo data for a fresh clone, and get all of it done by cheaper models under one
+prompt. The coordinator you're typing at picks the tier for each job, and one of the
+workers isn't Claude at all.
 
 ```bash
 git switch -c quality-pass
@@ -472,66 +445,54 @@ git switch -c quality-pass
 
 > **Prompt 12.1**
 >
-> Quality pass over the whole repo. Fan out subagents in parallel, on the cheapest
-> model that's up to each job: a Sonnet agent sweeps for duplicated Tailwind styling
-> and consolidates it into components/ui, a second Sonnet agent writes a concise
-> README (what the app is, stack, setup incl. env vars, scripts, short architecture
-> overview, current state only), and an Opus agent reviews the auth, chat, and tool
-> code with fresh eyes for security problems (session checks, user scoping, secrets)
-> and reports findings without editing. Then integrate: fix anything the review found,
-> run `npx biome check --write .`, make the full suite green (tests, e2e, build), and
-> check AGENTS.md against its own rule: current, concise, nothing stale.
+> Quality pass. Delegate in parallel, each job to the cheapest model that can do it, and
+> tell me afterward which model did what and why. A Sonnet agent writes a concise README
+> (what the app is, stack, setup incl. env vars, scripts, short architecture overview,
+> current state only). The pi coding agent, run non-interactively in this repo with
+> openrouter/z-ai/glm-5.3-flash and thinking low, writes scripts/seed.ts: a demo student
+> with a dozen realistic todos, so a fresh clone has something to show; pi touches
+> nothing but that file, you wire the npm script. A Haiku agent checks that every
+> command and file path mentioned in AGENTS.md and the new README exists and runs. Then
+> review what came back as if a junior had written it, fix what needs fixing, full suite
+> green, AGENTS.md current. Wait for every worker to finish before you report.
 
-Then prompt 11.2 again, word for word, and merge the pull request the same way.
+Then prompt 11.2 again, word for word, and merge the pull request the same way. Run
+`npm run db:seed`, sign in as the demo student, and the list is full.
 
 **Teaching points**
 
-- **Subagents.** Claude Code can spawn parallel agents, each with its own fresh context.
-  Two of the reasons to reach for them show up in prompt 12.1. *Parallelism* handles
-  disjoint chores like the
-  styling sweep and the README. *Fresh eyes* handle the review, because the reviewer
-  never saw the implementation history and reads the code like an outside auditor
-  instead of trusting its memory of writing it. Note the constraint "reports findings
-  without editing". Parallel agents get disjoint write areas, and reviewers stay
-  read-only.
-- **Model tiering** is the third reason for subagents, and it's about cost. The
-  coordinator session is the expensive part, because it holds the whole history and
-  makes the judgment calls. Each subagent picks its own model, so match the tier to the
-  task. Mechanical chores run fine on Sonnet. The security review is judgment work,
-  where you're paying for what you *didn't* think to ask, so it stays on Opus. Rule of
-  thumb: if you could write the task as a checklist, tier down, and never tier down
-  the reviewer.
-- **The reviewer has something to find.** The chat route checks for a session and then
-  hands the request to CopilotKit, and CopilotKit's runtime also serves thread
-  endpoints: list all threads of an agent, read the messages of a thread by id. Those
-  endpoints never touch Mastra. They read the runtime's in-memory runner, whose thread
-  store is process-wide and keyed by thread id alone, and our thread ids are
-  `tutor:<userId>`. Signed in as user A, `GET /api/copilotkit/threads` lists every
-  user id on the server, and the messages endpoint returns B's conversation, todos
-  included. The implementing agent in session 1 tested its memory scoping and wrote
-  into AGENTS.md that Mastra's resource check protects threads, so a reviewer that
-  trusts the file stops there. The fresh-eyes reviewer attacks the shape of the route
-  instead, which is how it reaches a hole the author's own tests were built around. If
-  your reviewer misses it, ask the coordinator directly: "can user A read user B's
-  thread through the CopilotKit thread endpoints?"
-- **Watch how the fix gets proven.** Expect the coordinator to demonstrate the hole
-  against a running server before it fixes anything, to fix it with an allowlist of
-  the exact pathnames the browser calls, and to explain why a prefix check would not
-  do: CopilotKit's router matches on the trailing path segments, so
-  `/api/copilotkit/agent/tutor/threads` reaches the same handler. Then expect it to
-  restore the old route once, run its new e2e test against it, and report that the
-  test fails with a 200 where it expects a 404. Until that run, nothing showed the test
-  could fail at all, and an agent that goes looking for the red run is what the Opus
-  price buys you.
-- **Over-blocking is a finding too.** The browser calls the thread list once on mount.
-  A route that answers 404 there breaks nothing visible and fills the console with
-  errors, so a good coordinator notices in its own "chat still works" check and
-  answers that one call with an empty list instead.
+- **Three tiers under one prompt.** The session you type into runs on the strongest
+  model, holds the whole history, and makes the judgment calls, which makes it the
+  expensive part. Each subagent starts with a fresh context and its own model, so the
+  coordinator matches the tier to the job: Sonnet for a README that needs reading and
+  judgment, Haiku for a checklist that needs neither, and a flash model for a
+  self-contained script. Ask the coordinator to justify its choices at the end, and the
+  prompt does, because it asked for the reasoning.
+- **A harness is just another worker.** The pi run is the step 8 demo doing real work.
+  Claude Code writes pi a task, runs `pi -p` in the repo, and reads the file that comes
+  back, the same way it reads a subagent's summary. Nothing in the coordinator's loop
+  cares that the worker is a different program talking to a different vendor. Watch the
+  Bash call in the tool stream and read the prompt Claude wrote for pi. It is a delegation
+  brief written by a model for a model, and it is usually better than what a person
+  types.
+- **Cheap output is input.** The coordinator reviews the seed script the way it would
+  review a junior's pull request, and the flash model gives it something to find:
+  expect a schema detail that doesn't match `lib/schema.ts`, a missing import path, or a
+  script that works only against an existing user. The fix costs the coordinator a
+  minute and the room sees why the strong model sits at the top: it decides what good
+  looks like.
+- **Subagents are a context firewall too.** The Haiku agent reads every file that
+  AGENTS.md and the README point at. None of that lands in your window, only its list
+  of findings does. Same idea as `/clear` in step 10, applied sideways.
+- **Disjoint write areas.** Sonnet writes the README, pi writes `scripts/seed.ts`,
+  Haiku writes nothing. Parallel workers that share a file produce the same conflicts as
+  parallel people, so the prompt hands each one its own.
 - The README is for humans arriving at the repo, and AGENTS.md is operating
   instructions for agents. Both hold current state only.
 
-**Verify:** the full suite is green, the README reads well, the thread endpoints answer
-only for the caller's own thread, and `main` carries the merge.
+**Verify:** the coordinator's summary names a model per job with a reason, the seed
+script runs on a fresh database, the README reads well, the full suite is green, and
+`main` carries the merge.
 
 ## Step 13: a design skill, built and applied in two worktrees
 
@@ -543,13 +504,9 @@ files. Then git shows what parallel work costs.
 
 A worktree is a second checkout of the same repository in its own directory, on its
 own branch. Claude Code creates them under `.claude/worktrees/<name>/`, which the
-starter already git-ignores. Git-ignored files don't come along into a fresh checkout,
-so tell Claude Code which ones to copy:
-
-```bash
-printf '.env\n' > .worktreeinclude
-git add .worktreeinclude && git commit -m "Copy .env into worktrees" && git push
-```
+starter git-ignores. Git-ignored files don't come along into a fresh checkout, so the
+starter's `.worktreeinclude` names the one that has to: `.env`. Claude Code copies
+whatever that file lists into every new worktree.
 
 Open two terminals in the repo root.
 
@@ -583,11 +540,11 @@ claude --worktree comic
 > **Prompt 13.3**
 >
 > This is a fresh worktree, so run npm install and npm run db:migrate first. Then use
-> the frontend-design skill to restyle the whole app in a colorful 1980s comic-book
-> style: bold outlines, halftone dots, loud primary colors, dramatic type. Every feature
-> keeps working, the full suite stays green, AGENTS.md stays current. Another agent is
-> running the e2e suite in a sibling worktree on port 3100, so run yours with
-> E2E_PORT=3101.
+> the frontend-design skill to give the app a colorful 1980s comic-book look, limited to
+> the color palette, the fonts, and the buttons: loud primary colors, dramatic display
+> type, bold outlines. Nothing else changes. Every feature keeps working, the full suite
+> stays green, AGENTS.md stays current. Another agent is running the e2e suite in a
+> sibling worktree on port 3100, so run yours with E2E_PORT=3101.
 
 While both agents work, talk through the worktree mechanics below. When they finish,
 run each app on its own port and put them side by side:
@@ -602,7 +559,7 @@ Each worktree has its own `data/app.db`, so sign up again in each.
 ### Merge one, rebase the other
 
 The heise version is the one we keep, because the skill is reusable and the comic
-restyle is a one-off. In terminal one:
+palette is a one-off. In terminal one:
 
 > **Prompt 13.4**
 >
@@ -610,7 +567,8 @@ restyle is a one-off. In terminal one:
 > about the brand, and how to verify the restyle.
 
 Merge it the usual way. Then, in terminal two, the comic branch is behind `main` and
-touches the same files, `app/globals.css`, `components/ui/`, and AGENTS.md among them:
+touches the same files, `app/globals.css`, `components/ui/button.tsx`, and AGENTS.md
+among them:
 
 > **Prompt 13.5**
 >
@@ -638,11 +596,12 @@ The agent may have committed on a branch of its own naming rather than on
 `worktree-<name>`, so read the output of `git branch` and delete what's left over,
 except `main`.
 
-### If the skill's recipe has bugs
+### If time permits: fold the skill's bugs back
 
 Applying the ai-tutor-design skill is the first real test of it. If the restyle agent
 worked around something the skill got wrong, and it says so in its summary or in
-AGENTS.md, fold the fix back:
+AGENTS.md, fold the fix back. This part is optional; the lesson is the same without the
+run, and the prompt is here for the day you have the minutes:
 
 > **Prompt 13.6**
 >
@@ -667,7 +626,7 @@ AGENTS.md, fold the fix back:
   and a chat app share a palette and a typographic voice, and nothing else. The skill
   has to say which is which, or the restyle produces a teaser grid with a chat box in
   it.
-- **Tests don't see CSS.** Both restyle agents hit the same wall: CopilotKit's
+- **Tests don't see CSS.** Expect the heise restyle to hit a wall: CopilotKit's
   stylesheet is imported from `components/chat.tsx` and lands after `globals.css`, so a
   plain override of its `[data-copilotkit]` variables loses on load order and the chat
   stays default white on top of the new page. The unit tests, the e2e suite, and the
@@ -688,22 +647,16 @@ AGENTS.md, fold the fix back:
   `worktree-<name>`, its own `node_modules`, and its own database. That is why both
   prompts start with `npm install`. While a session runs in a worktree, Claude Code
   refuses edits and git commands that would reach the main checkout, and it tells the
-  agent how to rewrite a refused command.
-- **Cleanup is part of the feature.** When you exit a worktree session, Claude Code
-  asks whether to keep or remove a worktree that still holds work. A clean, unnamed
-  one disappears on its own. `git worktree list` shows what's left, and
-  `git worktree remove` takes care of the rest.
-- **The conflict was predictable.** Two branches that both restyle the whole app both
-  edit `globals.css` and every component in `components/ui/`, and both edit AGENTS.md
-  because the maintenance rule says so. Parallel work is cheap while it runs and
+  agent how to rewrite a refused command. When you exit the session, Claude Code asks
+  whether to keep or remove a worktree that still holds work, and `git worktree list`
+  shows what's left.
+- **The conflict was predictable.** Two branches that both change the palette and the
+  buttons both edit `globals.css` and `components/ui/button.tsx`, and both edit
+  AGENTS.md because the maintenance rule says so. Parallel work is cheap while it runs and
   expensive when it lands. The agent resolves conflicts the way it does everything
   else, by reading both sides and choosing, and its choice in prompt 13.5 is only as
   good as the rule you gave it, "the comic style wins". Without that rule you get a
   blend nobody asked for.
-- **Stale branches.** The comic branch started from a `main` that had no heise skill.
-  The longer a worktree lives, the more of `main` it has never seen. Rebase early, or
-  keep the worktree short-lived. A worktree that outlives the day usually ends up as a
-  branch nobody rebases and nobody merges.
 - **A skill is code, so its first application is its first test.** Prompt 13.6 folds
   what the restyle uncovered back into `.claude/skills/ai-tutor-design/`, where the next
   agent picks it up instead of rediscovering the workaround.
@@ -715,14 +668,16 @@ only the main checkout, and the full suite is green.
 ## Wrap-up
 
 Close the day with `git log --oneline` on `main`. Since the starter: three fixes, the
-tools with their pull request, the quality pass with its security fix, the design
-skill. Every one of them reviewed and tested. Open AGENTS.md once more and check it
+tools with their pull request, the quality pass with its README and seed script, the
+design skill. Every one of them reviewed and tested. Open AGENTS.md once more and check it
 against its own rule; it grew today, and everything in it should still be a pointer or
 a one-sentence gotcha.
 
-Session 3 picks up the thread the reviewer pulled in step 12: what an agent may reach,
-how MCP servers plug into both Claude Code and our tutor, and how to keep untrusted
-input from steering either one.
+Session 3 opens with something nobody looked at today. The chat route checks for a
+session and hands everything else to CopilotKit, and CopilotKit serves more endpoints
+than the browser calls. From there: what an agent may reach, how MCP servers plug into
+both Claude Code and our tutor, and how to keep untrusted input from steering either
+one.
 
 ---
 
@@ -745,45 +700,7 @@ In the live session, use the interactive TUI instead. Tool calls, doc fetches, d
 and test runs scrolling past are what the audience learns from, far more than the
 finished diff.
 
-## Appendix B: the VS Code AG-UI inspector
-
-The CopilotKit VS Code extension subscribes to
-`/api/copilotkit/cpk-debug-events`, a server-sent event stream that CopilotKit's
-runtime only serves outside production. Two things stand between it and our app, and
-each is one prompt.
-
-> **Prompt B.1**
->
-> The VS Code AG-UI inspector connects to /api/copilotkit/cpk-debug-events without a
-> browser session, so let exactly that path through the auth gate in development,
-> never in production. Use the copilotkit skills. Keep the suite green and AGENTS.md
-> current. Commit when everything is green.
-
-After that, the stream connects and stays silent. The route builds a new
-`CopilotRuntime` per request, every runtime owns its own debug event bus, and the bus
-the inspector listens to is never the one a chat run broadcasts on.
-
-> **Prompt B.2**
->
-> The /api/copilotkit/cpk-debug-events stream is reachable in development now, but it
-> stays silent: the route builds a new CopilotKit runtime per request, and each runtime
-> has its own debug event bus, so the inspector never sees the events of a run. Make the
-> events flow: share one runtime across requests, and keep the user id coming from the
-> verified session on every request (use the copilotkit skills). Production behavior
-> must not change. Prove it works, keep the suite green and AGENTS.md current, and
-> commit on main.
-
-Expect the result to cache one runtime on `globalThis` and hand it an `agents` factory
-that receives the request and resolves the session per call. Expect it to prove the fix
-with a unit test that runs the real runtime, opens the debug stream, and reads a
-scripted agent's events back off it. Both prompts drive long, expensive agent runs,
-which is why they sit in this appendix as homework rather than in step 9.
-
-The debug stream shows every event of every user, so the two guards matter: CopilotKit
-disables the endpoint when `NODE_ENV` is `production`, and the route only exempts the
-path from the session check in development. Session 3 is about this kind of decision.
-
-## Appendix C: live-demo insurance
+## Appendix B: live-demo insurance
 
 - **Pre-create the worktrees the evening before.** `claude --worktree heise` with a
   name that already exists reopens the existing worktree, so run `npm install` in both
@@ -796,7 +713,5 @@ path from the session check in development. Session 3 is about this kind of deci
   If a fresh major lands the night before, pin it in the prompt to the version that
   worked for you. Versions that worked: TypeScript 7.0.2, Vitest 5.0.0, Better Auth
   1.7.3, Biome 2.5.12, `@types/node` 26, `@libsql/client` 0.18.0.
-- **The comic restyle is the most expensive prompt of the day.** It renders and
-  screenshots the app repeatedly while it works, and the bill shows it.
 - **If the LLM e2e flakes live, say so and move on.** That flakiness is exactly why step
   11 keeps it out of the default suite.

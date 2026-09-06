@@ -74,7 +74,16 @@ function createMastra() {
         instructions,
         // Mastra's model router reads OPENROUTER_API_KEY itself; no AI SDK
         // provider package is involved.
-        model: "openrouter/z-ai/glm-5.3-flash",
+        model: {
+          id: "openrouter/z-ai/glm-5.3-flash",
+          // OPENROUTER_BASE_URL routes the traffic through a local proxy
+          // (mitmproxy in reverse mode, see .env.example). A custom url
+          // switches off the router's own key lookup, so hand the key over.
+          ...(process.env.OPENROUTER_BASE_URL && {
+            url: process.env.OPENROUTER_BASE_URL,
+            apiKey: process.env.OPENROUTER_API_KEY,
+          }),
+        },
         memory: new Memory({ storage, options: { lastMessages: 40 } }),
       }),
     },

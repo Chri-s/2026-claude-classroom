@@ -24,3 +24,16 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/*
+ * The CopilotKit Inspector, development only — a production build never loads
+ * it, so this element does not exist there and the rule matches nothing.
+ *
+ * Its <cpk-web-inspector> host anchors the launcher 16px into the top-right
+ * corner, on top of the header's sign-out button, and takes the clicks meant
+ * for it. The host is positioned by a transform, so shift it with the margin
+ * instead; dragging the launcher elsewhere still works and is remembered.
+ */
+cpk-web-inspector {
+  margin-top: 4rem;
+}
