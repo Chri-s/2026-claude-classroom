@@ -53,7 +53,7 @@ AI tutoring web app on Next.js 16 App Router + React 19 + Tailwind v4: a Mastra 
 - The route answers 401 before touching Mastra, and that is the only auth gate — the runtime endpoint is otherwise public.
 - Use `createCopilotRuntimeHandler` from `@copilotkit/runtime/v2`; the package's own `skills/runtime/` docs flag the Express and Hono adapters as "avoid at all costs".
 - `@copilotkit/react-core/v2` is the whole client surface (`CopilotKit`, `CopilotChat`, `styles.css`) — `@copilotkit/react-ui` and the package roots are v1 and do not work with it.
-- `showDevConsole={false}` is deliberate: the on-by-default localhost inspector renders a `<cpk-web-inspector>` host that swallows pointer events across the page, including the header's sign-out button.
+- `enableInspector={false}` is deliberate: the Inspector is on by default in development and renders a `<cpk-web-inspector>` host that swallows pointer events across the page, including the header's sign-out button.
 - Threads only persist inside Mastra's memory — the runtime runs on the default `InMemoryAgentRunner`, so the browser's own transcript still starts empty on reload.
 - `@copilotkit/runtime` drags in a zod-3 dependency tree that conflicts with Better Auth's zod 4, hence `.npmrc`'s `legacy-peer-deps=true`; drop it and `npm install` fails.
 

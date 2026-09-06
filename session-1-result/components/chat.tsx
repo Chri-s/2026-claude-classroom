@@ -16,13 +16,13 @@ export function Chat({
   threadId: string;
 }) {
   return (
-    // The dev console defaults to on for localhost, and its <cpk-web-inspector>
+    // The Inspector is on by default in development, and its <cpk-web-inspector>
     // host swallows pointer events across the page — including the header's
     // sign-out button.
     <CopilotKit
       runtimeUrl="/api/copilotkit"
       credentials="include"
-      showDevConsole={false}
+      enableInspector={false}
     >
       <CopilotChat
         agentId={agentId}
