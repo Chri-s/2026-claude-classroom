@@ -451,8 +451,9 @@ git switch -c quality-pass
 > current state only). The pi coding agent, run non-interactively in this repo with
 > openrouter/z-ai/glm-5.3-flash and thinking low, writes scripts/seed.ts: a demo student
 > with a dozen realistic todos, so a fresh clone has something to show; pi touches
-> nothing but that file, you wire the npm script. A Haiku agent checks that every
-> command and file path mentioned in AGENTS.md and the new README exists and runs. Then
+> nothing but that file, you wire the npm script. pi hangs when its stdin stays open, so
+> start it with stdin closed (< /dev/null). A Haiku agent checks that every command and
+> file path mentioned in AGENTS.md and the new README exists and runs. Then
 > review what came back as if a junior had written it, fix what needs fixing, full suite
 > green, AGENTS.md current. Wait for every worker to finish before you report.
 
@@ -471,16 +472,30 @@ Then prompt 11.2 again, word for word, and merge the pull request the same way. 
 - **A harness is just another worker.** The pi run is the step 8 demo doing real work.
   Claude Code writes pi a task, runs `pi -p` in the repo, and reads the file that comes
   back, the same way it reads a subagent's summary. Nothing in the coordinator's loop
-  cares that the worker is a different program talking to a different vendor. Watch the
-  Bash call in the tool stream and read the prompt Claude wrote for pi. It is a delegation
-  brief written by a model for a model, and it is usually better than what a person
-  types.
+  cares that the worker is a different program talking to a different vendor.
+- **The brief is the work.** Open the Bash call that starts pi and read the prompt Claude
+  wrote for it. Expect a page: which files to read first, that `lib/db.ts` starts with
+  `server-only` and must not be imported by a script, that the `@/` alias works under
+  `tsx`, how to hash the demo password through Better Auth instead of writing the table
+  by hand, the house style, and a list of things pi must not touch. A flash model with
+  that brief writes a seed script that runs on the first try. The same model with the
+  one-line task from prompt 12.1 wouldn't. The strong model's contribution is the
+  brief, and that is what you pay it for.
 - **Cheap output is input.** The coordinator reviews the seed script the way it would
-  review a junior's pull request, and the flash model gives it something to find:
-  expect a schema detail that doesn't match `lib/schema.ts`, a missing import path, or a
-  script that works only against an existing user. The fix costs the coordinator a
-  minute and the room sees why the strong model sits at the top: it decides what good
-  looks like.
+  review a junior's pull request and runs it against a copy of the database. Expect
+  findings of the kind a junior produces: a top-level `await` in a package that
+  compiles to CommonJS, or a formatting slip. Expect one finding about the workflow
+  itself, too. pi may rewrite its file after the coordinator has already patched it,
+  because the coordinator started reviewing when the file appeared instead of when the
+  process exited. A worker is done when its process is done. And expect the Haiku audit
+  to return a finding the coordinator rejects as over-literal, which is the right call
+  and worth pointing at: the cheap model reports, the expensive one decides.
+- **A worker that never answers.** Prompt 12.1 tells the coordinator to close pi's
+  stdin. Without that sentence, pi started from a background shell waits on the open
+  stdin forever, the coordinator waits on pi, and the room waits on both. Every harness
+  has a detail like this, and a coordinator that can't see the worker's output can't
+  diagnose it. Leave the sentence out if you want to show the hang, and have
+  `pkill -f "pi -p"` ready.
 - **Subagents are a context firewall too.** The Haiku agent reads every file that
   AGENTS.md and the README point at. None of that lands in your window, only its list
   of findings does. Same idea as `/clear` in step 10, applied sideways.
@@ -601,7 +616,7 @@ except `main`.
 Applying the ai-tutor-design skill is the first real test of it. If the restyle agent
 worked around something the skill got wrong, and it says so in its summary or in
 AGENTS.md, fold the fix back. This part is optional; the lesson is the same without the
-run, and the prompt is here for the day you have the minutes:
+run, and the prompt is here for a day with room for it:
 
 > **Prompt 13.6**
 >
