@@ -191,8 +191,8 @@ and everyone has seen the event stream once. Then put the prompt back with
 ## Step 9: three fixes in the existing repo
 
 **Goal:** bug fixes and small features in a repo that already exists, with real bugs.
-Three fixes with one commit each on `main`, and after the first two an analysis prompt
-that asks the agent about its own run. Claude Code sometimes branches off `main` on its
+Three fixes with one commit each on `main`, and after each one an analysis prompt that
+asks the agent about its own run. Claude Code sometimes branches off `main` on its
 own before it commits. If `git status` shows a new branch after a prompt, bring it back
 with `git switch main && git merge <branch>` and move on. Step 11 makes branches the
 rule anyway.
@@ -230,6 +230,28 @@ rule anyway.
 > available width and height, keep the header. Small and tasteful, no redesign yet, that
 > comes later today. Suite green, AGENTS.md current. Commit when everything is green.
 
+The last analysis prompt comes in four variants. Let the room pick one, run it, and
+then discuss what the other three would have asked differently.
+
+> **Prompt 9.3 analysis, variant A**
+>
+> Critically evaluate AGENTS.md. Is it bloated?
+
+> **Prompt 9.3 analysis, variant B**
+>
+> Which lines of AGENTS.md did you actually rely on in the last three tasks, and which
+> would you have found out anyway by opening the file they point to?
+
+> **Prompt 9.3 analysis, variant C**
+>
+> Read AGENTS.md as if you were starting on this repo tomorrow. What would you cut,
+> what is wrong, and what is missing?
+
+> **Prompt 9.3 analysis, variant D**
+>
+> Rewrite AGENTS.md to half its length without losing anything that saved you a wrong
+> turn today.
+
 **Teaching points**
 
 - **Let the agent do the research.** Prompt 9.1 doesn't say whether TypeScript 7 works
@@ -252,6 +274,20 @@ rule anyway.
   constraint. Expect the agent to find the real cause in the stylesheets and to test
   the result with Playwright in a dark color scheme before it commits, all from the
   shortest prompt of the day.
+- **Ask the agent about its own run.** The analysis prompts change no code, variant D
+  aside. They ask what the update cost, what would have made the hot-reload fix easier,
+  and what AGENTS.md has turned into after three commits. Read each answer as a claim
+  to check.
+  The cost figure is the model's own estimate, so hold it next to what `/cost` reports.
+  The wish list after prompt 9.2 is the agent naming the context it lacked, which is
+  exactly what a skill or a vendored source tree supplies. The bloat verdict has a
+  yardstick in the file itself, in the maintenance section: a line the reader would
+  learn by opening the file it points to should go. The four variants differ in how
+  much they lead. Variant A invites a yes. Variant B makes the agent answer from its
+  own tool calls, and variant C asks in three directions so cuts alone can't satisfy
+  it. Variant D is the only one that changes the file, so it gets a commit of its own.
+  Whichever runs, if the agent wants to cut the Next.js block at the top, read the block
+  out, since it says it re-adds itself on every dev run.
 
 **Verify:** `npm test`, `npm run test:e2e`, and `npm run build` are green after each
 prompt. Change the instructions in `lib/tutor.ts` and the next reply reflects it
