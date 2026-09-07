@@ -123,7 +123,7 @@ everyone a moment to change it: a different name, a different language, a butler
 who is rude, whatever they like. Then have them chat with the result.
 
 The change doesn't show up on hot reload, because `lib/tutor.ts` caches the agent.
-Restart `npm run dev` and the new prompt is live. Prompt 9.2 fixes that, so leave the
+Restart `npm run dev` and the new prompt is live. Prompt 9.3 fixes that, so leave the
 restart in place for now.
 
 ### Watch the protocol
@@ -191,10 +191,10 @@ and everyone has seen the event stream once. Then put the prompt back with
 ## Step 9: three fixes in the existing repo
 
 **Goal:** bug fixes and small features in a repo that already exists, with real bugs.
-Three prompts, one commit each, on `main`. Claude Code sometimes branches off `main`
-on its own before it commits. If `git status` shows a new branch after a prompt, bring
-it back with `git switch main && git merge <branch>` and move on. Step 11 makes
-branches the rule anyway.
+Four prompts, and every one that changes code ends in its own commit on `main`. Claude
+Code sometimes branches off `main` on its own before it commits. If `git status` shows
+a new branch after a prompt, bring it back with `git switch main && git merge <branch>`
+and move on. Step 11 makes branches the rule anyway.
 
 > **Prompt 9.1**
 >
@@ -207,12 +207,17 @@ branches the rule anyway.
 
 > **Prompt 9.2**
 >
+> Can you analyze this conversation and tell me the costs in current Claude API rates?
+> I am also interested in the number of tool calls.
+
+> **Prompt 9.3**
+>
 > One developer-experience fix, development only, production behavior must not change:
 > editing the tutor's instructions in lib/tutor.ts should take effect on hot reload
 > without a dev-server restart, while the database connection stays cached. Keep the
 > suite green and AGENTS.md current. Commit when everything is green.
 
-> **Prompt 9.3**
+> **Prompt 9.4**
 >
 > The chat renders as a white box on a black page for users who enabled dark mode in
 > their operating system. Force light mode for the whole app, let the chat use the
@@ -234,10 +239,10 @@ branches the rule anyway.
   aren't anymore. The maintenance rule keeps the file current on every change, but
   nothing re-checks the lines a change didn't touch, so an explicit "verify every
   claim" once in a while is part of owning the file.
-- **Read the summary.** Prompt 9.2 asks for two things that pull against each other,
+- **Read the summary.** Prompt 9.3 asks for two things that pull against each other,
   a prompt that reloads and a database connection that doesn't. Expect the agent to
   explain in its summary how it split the two, and read that explanation out.
-- **Two sentences of intent are enough.** Prompt 9.3 describes a symptom and a
+- **Two sentences of intent are enough.** Prompt 9.4 describes a symptom and a
   constraint. Expect the agent to find the real cause in the stylesheets and to test
   the result with Playwright in a dark color scheme before it commits, all from the
   shortest prompt of the day.
@@ -355,7 +360,7 @@ passes it to the model router as the base URL, so uncomment the line in `.env`:
 OPENROUTER_BASE_URL=http://localhost:8090/api/v1
 ```
 
-Since prompt 9.2 the agent is rebuilt on the next request in development, so no restart
+Since prompt 9.3 the agent is rebuilt on the next request in development, so no restart
 is needed. Say "I need to read chapter 3 and do exercise 5 for tomorrow" and open the
 mitmweb URL from the log. One chat turn is two requests to OpenRouter:
 
