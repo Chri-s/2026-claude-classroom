@@ -122,10 +122,9 @@ Open `lib/tutor.ts`. The whole personality is the `instructions` constant. Give
 everyone a moment to change it: a different name, a different language, a butler
 who is rude, whatever they like. Then have them chat with the result.
 
-It won't work on the first try. `lib/tutor.ts` caches the Mastra instance on
-`globalThis` so that hot reloads don't leak database connections, and that cache keeps
-the old instructions alive. Restart `npm run dev` and the new prompt is live. Step 9
-fixes the caching properly, so leave the restart in place for now.
+The change doesn't show up on hot reload, because `lib/tutor.ts` caches the agent.
+Restart `npm run dev` and the new prompt is live. Prompt 9.2 fixes that, so leave the
+restart in place for now.
 
 ### Watch the protocol
 
@@ -144,12 +143,7 @@ watch it two ways.
   on the right, and the "View in Inspector" link under every reply opens a panel with
   the thread, every event, the agent's state, and counters for messages, tool calls,
   and errors. The tool-call counter reads zero today, and it stops reading zero in step
-  11. One line in `app/globals.css` moves the launcher down, because CopilotKit anchors
-  it exactly where the header keeps the sign-out button.
-
-CopilotKit's VS Code extension can show the same event stream from the editor, but it
-needs the debug endpoint open to callers without a session and one runtime shared across
-requests. That is a real-project change, so it stays out of today.
+  11.
 
 ### Claude drives another agent
 
@@ -189,7 +183,7 @@ and everyone has seen the event stream once. Then put the prompt back with
 
 ## Step 9: three fixes in the existing repo
 
-**Goal:** the agenda item "Bugfixes und Features am bestehenden Repo" with real bugs.
+**Goal:** bug fixes and small features in a repo that already exists, with real bugs.
 Three prompts, one commit each, on `main`. Claude Code sometimes branches off `main`
 on its own before it commits. If `git status` shows a new branch after a prompt, bring
 it back with `git switch main && git merge <branch>` and move on. Step 11 makes
@@ -198,7 +192,7 @@ branches the rule anyway.
 > **Prompt 9.1**
 >
 > Update every dependency to its latest version, majors included. Check whether this
-> Next.js version supports TypeScript 7 (its docs are in node_modules/next/dist/docs);
+> Next.js version supports TypeScript 7;
 > if it does, move to TypeScript 7, otherwise stay on 6. Read the migration notes of
 > anything that jumped a major before you touch config. Make tests, e2e, build, and
 > biome green. Then check every claim in AGENTS.md against the repo and fix what has
@@ -221,42 +215,25 @@ branches the rule anyway.
 **Teaching points**
 
 - **Let the agent do the research.** Prompt 9.1 doesn't say whether TypeScript 7 works
-  with Next.js. It says where the answer is. Watch the agent open
-  `node_modules/next/dist/docs` and find the page that explains it: Next 16.3 runs the
-  project-local `tsc` for type checking by default, which is exactly what TypeScript
-  7's Go compiler needs, because that release ships no JavaScript compiler API yet.
-  The agent installs `typescript@7`, and the editor plugin for route types stops
-  working until TypeScript 7.1, which is a fair trade for a build that runs several
-  times faster. If your run stays on 6, ask the agent why and read the answer out.
-- **Majors are where the tests earn their keep.** Vitest 5 clears mocks before every
-  test and refuses `vi.mock` inside a `describe`. The agent reads the migration guide
-  because the prompt told it to, and the suite is the only thing that tells it whether
-  the reading was enough.
-- **Patches bite too.** Better Auth 1.7.3 drops the `account.issuer` column that 1.7.2
-  required, and its startup check fails hard on a database that still has it. The
-  agent has to regenerate `lib/auth-schema.ts` and write a migration for a version
-  bump that looks like nothing. Watch for `auth:generate`, `db:generate`, and
-  `db:migrate` in the tool stream, and for Vitest 5 blocked by Better Auth's stale
-  peer range, which the agent solves with a one-package `overrides` entry instead of
-  the global `legacy-peer-deps` the old AGENTS.md talked about.
-- **Memory drifts.** AGENTS.md claims an `.npmrc` with `legacy-peer-deps` that the
-  repo no longer has, and it calls `vite-tsconfig-paths` deprecated when the package
-  is alive and merely redundant next to Vite's own tsconfig path resolution. Both
-  entries were true, or believed, when written. The maintenance rule keeps the file
-  current on every change, but nothing re-checks the lines a change didn't touch, so
-  an explicit "verify every claim" once in a while is part of owning the file.
-- **Prompt 9.2 is a hot-reload problem, not a Mastra problem.** The `globalThis` cache in
-  `lib/tutor.ts` exists so that a reload doesn't open another libSQL connection. The
-  fix keeps the connection cached and rebuilds the cheap part, the agent, on every
-  module evaluation in development. Expect the agent to explain that split in its
-  summary, and read the summary.
-- **Prompt 9.3 is two sentences of intent, and the bug has a real cause.** CopilotKit's
-  stylesheet switches to dark on a `.dark` class, and Tailwind's `dark:` variant fires
-  on `prefers-color-scheme`. On a dark-preferring browser the page goes black and the
-  chat stays light, which is the white box. Expect the agent to re-point Tailwind's
-  `dark:` variant at the same class and to set `colorScheme: "light"` in the viewport
-  export, and expect it to test the result with Playwright in a dark color scheme
-  before it commits, all from the shortest prompt of the day.
+  with this Next.js version. It says where the answer is, and the agent opens the docs
+  in `node_modules` and decides. If your run stays on 6, ask the agent why and read the
+  answer out.
+- **The suite is the safety net.** Prompt 9.1 tells the agent to read the migration
+  notes, and the suite tells it whether the reading was enough. Watch the tool stream
+  alternate between an edit and a test run until everything is green. A patch bump
+  that quietly needs a database migration gets caught the same way, by a failing
+  startup check rather than by anyone reading a changelog.
+- **Memory drifts.** AGENTS.md holds a couple of claims that were true when written and
+  aren't anymore. The maintenance rule keeps the file current on every change, but
+  nothing re-checks the lines a change didn't touch, so an explicit "verify every
+  claim" once in a while is part of owning the file.
+- **Read the summary.** Prompt 9.2 asks for two things that pull against each other,
+  a prompt that reloads and a database connection that doesn't. Expect the agent to
+  explain in its summary how it split the two, and read that explanation out.
+- **Two sentences of intent are enough.** Prompt 9.3 describes a symptom and a
+  constraint. Expect the agent to find the real cause in the stylesheets and to test
+  the result with Playwright in a dark color scheme before it commits, all from the
+  shortest prompt of the day.
 
 **Verify:** `npm test`, `npm run test:e2e`, and `npm run build` are green after each
 prompt. Change the instructions in `lib/tutor.ts` and the next reply reflects it
@@ -362,8 +339,7 @@ docker run --rm -d -t --name mitm -p 8090:8090 -p 8091:8091 mitmproxy/mitmproxy 
 docker logs mitm     # prints the web UI URL with its token
 ```
 
-The `-t` matters. Without a terminal, Python buffers mitmweb's output, the log stays
-empty, and the UI answers 403 because you never saw the token.
+The `-t` matters. Without it the log stays empty and you never see the token.
 
 Then point Mastra at the proxy. `lib/tutor.ts` already reads `OPENROUTER_BASE_URL` and
 passes it to the model router as the base URL, so uncomment the line in `.env`:
@@ -374,21 +350,17 @@ OPENROUTER_BASE_URL=http://localhost:8090/api/v1
 
 Since prompt 9.2 the agent is rebuilt on the next request in development, so no restart
 is needed. Say "I need to read chapter 3 and do exercise 5 for tomorrow" and open the
-mitmweb URL from the log. One chat turn is two flows to `POST /api/v1/chat/completions`:
+mitmweb URL from the log. One chat turn is two requests to OpenRouter:
 
-- **The first request** carries `messages` with the system prompt and the student's
-  sentence, `tool_choice: "auto"`, and `tools`, which is your three Zod schemas rendered
-  as JSON Schema, `.describe()` texts included. Read `addTodo`'s description there. That
-  text, and nothing else, is what the model knows about the tool.
-- **The first response** is an SSE stream. One delta names the function and carries an
-  empty `arguments`, the next carries the arguments as a JSON string, and parallel
-  calls are told apart by `index`. Two todos in one sentence means two calls in one
-  response, and the stream ends with `finish_reason: "tool_calls"`.
-- **The second request** carries the assistant's tool calls and one `role: "tool"`
-  message per call with your executor's return value, verbatim. The response is plain
-  text, the sentence Bartholomew says to the student, ending in `finish_reason:
-  "stop"`. `tools` rides along on this request too, because the model may decide it
-  needs another call.
+- **The first request** carries the system prompt, the student's sentence, and
+  `tools`, which is your three Zod schemas rendered as JSON Schema, `.describe()` texts
+  included. Read `addTodo`'s description there. That text, and nothing else, is what
+  the model knows about the tool. The response is a tool call with its arguments, and
+  two todos in one sentence means two calls in one response.
+- **The second request** carries those calls and one `role: "tool"` message per call
+  with your executor's return value, verbatim. The response is plain text, the sentence
+  Bartholomew says to the student. `tools` rides along on this request too, because
+  the model may decide it needs another call.
 
 Afterward, comment the line out again and stop the proxy with `docker rm -f mitm`. With
 `OPENROUTER_BASE_URL` unset, the app talks to OpenRouter directly.
@@ -399,13 +371,12 @@ Afterward, comment the line out again and stop the proxy with `docker rm -f mitm
   the description is the API documentation the model reads, so writing them well *is*
   prompt engineering. Open one of the tool definitions and read the description aloud.
 - **Identity injection.** The user id travels from the session into Mastra's request
-  context and on into the tool executor, which reads it from the second argument of
-  `execute`. The model never sees it and never chooses it. Same rule as in steps 6 and
-  7: the model is untrusted input, and authorization lives in your code. Expect the
-  executor to throw when the id is missing instead of falling back to a default, and
-  expect `setTodoDone` to put the user id into the `WHERE` clause, so a guessed todo id
-  of another student matches nothing. Ask the agent how the AG-UI bridge keeps the
-  browser's payload away from that key. It has read the bundle and can tell you.
+  context and on into the tool executor. The model never sees it and never chooses it.
+  Same rule as in steps 6 and 7: the model is untrusted input, and authorization lives
+  in your code. Expect the executor to throw when the id is missing instead of falling
+  back to a default, and expect `setTodoDone` to scope its query to the user, so a
+  guessed todo id of another student matches nothing. Ask the agent how it made sure
+  the browser can't smuggle in a different id. It has read the bundle and can tell you.
 - **Watch the inspector during the live demo.** Say "I need to read chapter 3 and do
   exercise 5 for tomorrow" and the tutor offers to capture the todos. In the inspector,
   `TOOL_CALL_START`, `TOOL_CALL_ARGS`, and `TOOL_CALL_RESULT` events appear for each
@@ -413,13 +384,11 @@ Afterward, comment the line out again and stop the proxy with `docker rm -f mitm
   reading" and the checkmark in the sidebar flips.
 - **LLM tests are quarantined.** They're non-deterministic and slow, and they cost real
   money on every run, so they get their own npm script and stay out of the default
-  suite. How the agent draws the line varies: a file suffix like `*.llm.spec.ts` plus
-  an environment variable in the Playwright config, or a second config file. Both are
-  fine. If the LLM e2e fails on its first run, look at the spec before blaming the
-  model: typing into CopilotKit's composer and pressing Enter right away drops the
-  message, because the input state isn't ready yet, and the spec has to wait for the
-  send button to enable and click it. A good agent fixes the spec, says so, and writes
-  the lesson into AGENTS.md.
+  suite. How the agent draws the line varies, and any line that keeps the default suite
+  free of LLM calls is fine. If the LLM e2e fails on its first run, look at the spec
+  before blaming the model. The usual cause is a timing problem in how the test drives
+  the chat, and a good agent fixes the spec, says so, and writes the lesson into
+  AGENTS.md.
 - **The pull request is the review unit.** The agent writes the description, because
   it knows what it changed, and you read it as the reviewer. `gh pr create` from the
   agent works because `gh` is authenticated on your machine, and Claude Code links the
@@ -474,17 +443,17 @@ Then prompt 11.2 again, word for word, and merge the pull request the same way. 
   back, the same way it reads a subagent's summary. Nothing in the coordinator's loop
   cares that the worker is a different program talking to a different vendor.
 - **The brief is the work.** Open the Bash call that starts pi and read the prompt Claude
-  wrote for it. Expect a page: which files to read first, that `lib/db.ts` starts with
-  `server-only` and must not be imported by a script, that the `@/` alias works under
-  `tsx`, how to hash the demo password through Better Auth instead of writing the table
-  by hand, the house style, and a list of things pi must not touch. A flash model with
+  wrote for it. Expect a page: which files to read first, the quirks of this repo that
+  a standalone script has to respect, how to create the demo user through the auth
+  library instead of writing the table by hand, the house style, and a list of things
+  pi must not touch. A flash model with
   that brief writes a seed script that runs on the first try. The same model with the
   one-line task from prompt 12.1 wouldn't. The strong model's contribution is the
   brief, and that is what you pay it for.
 - **Cheap output is input.** The coordinator reviews the seed script the way it would
   review a junior's pull request and runs it against a copy of the database. Expect
-  findings of the kind a junior produces: a top-level `await` in a package that
-  compiles to CommonJS, or a formatting slip. Expect one finding about the workflow
+  findings of the kind a junior produces, a language feature the build setup doesn't
+  allow or a formatting slip. Expect one finding about the workflow
   itself, too. pi may rewrite its file after the coordinator has already patched it,
   because the coordinator started reviewing when the file appeared instead of when the
   process exited. A worker is done when its process is done. And expect the Haiku audit
@@ -641,14 +610,13 @@ run, and the prompt is here for a day with room for it:
   and a chat app share a palette and a typographic voice, and nothing else. The skill
   has to say which is which, or the restyle produces a teaser grid with a chat box in
   it.
-- **Tests don't see CSS.** Expect the heise restyle to hit a wall: CopilotKit's
-  stylesheet is imported from `components/chat.tsx` and lands after `globals.css`, so a
-  plain override of its `[data-copilotkit]` variables loses on load order and the chat
-  stays default white on top of the new page. The unit tests, the e2e suite, and the
-  build all stay green while that happens. Expect the agent to catch it from a
-  screenshot of the running app, to fix it with a more specific selector, and to write
-  the rule into AGENTS.md. Ask it how it noticed. The answer, a browser and a pixel
-  check, is the verification step the suite can't supply.
+- **Tests don't see CSS.** Expect the heise restyle to hit a wall: the chat widget
+  ships its own stylesheet, a plain override loses on load order, and the chat stays
+  default white on top of the new page. The unit tests, the e2e suite, and the build
+  all stay green while that happens. Expect the agent to catch it from a screenshot of
+  the running app, to fix it, and to write the rule into AGENTS.md. Ask it how it
+  noticed. The answer, a browser and a pixel check, is the verification step the suite
+  can't supply.
 - **Worktrees share the network.** Ports are per machine, and the Playwright config
   starts its dev server on port 3100 with `reuseExistingServer` on. Two worktrees
   running e2e at the same time means the second agent adopts the first agent's server
