@@ -147,6 +147,13 @@ watch it two ways.
 
 ### Claude drives another agent
 
+**Start prompt 9.1 now.** It updates every dependency and runs the whole suite until
+it's green, which takes long enough to stall a live session. Run `git restore
+lib/tutor.ts` so the working tree is clean, open a second terminal with its own Claude
+Code session, paste prompt 9.1 from step 9, and leave it running while this section
+plays out. By the time step 9 starts, the run is done or close to it, and you walk the
+room through the result instead of waiting for it.
+
 Claude Code is one harness around a model. **pi** from pi.dev is another one, a coding
 agent CLI with the same shape: read, bash, edit, and write tools, sessions, skills, and
 a non-interactive `-p` mode. In your Claude Code session:
