@@ -381,12 +381,18 @@ thread. Then wrap the branch up:
 > description a reviewer can actually use: what changed, how the user id reaches the
 > tools, how to test it.
 
-Open the pull request in the browser, read the description, skim the diff, and merge:
+Open the pull request in the browser, read the description, skim the diff, and merge.
+Stay in the Claude Code prompt for the merge instead of reaching for a second terminal.
+A line that starts with `!` runs as a shell command in the session, and both the command
+and its output land in the conversation:
 
-```bash
-gh pr merge --squash --delete-branch
-git switch main && git pull
+```text
+!gh pr merge --squash --delete-branch
+!git switch main && git pull
 ```
+
+Point that out to the room. The agent now reads that the branch is gone and the working
+copy sits on `main`, so the next prompt starts from the same picture you have.
 
 ### Traffic on the wire
 
