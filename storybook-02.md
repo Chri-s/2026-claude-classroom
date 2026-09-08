@@ -364,9 +364,18 @@ git switch -c todo-tools
 > sidebar. Use the mastra skill for the current tools API. Update AGENTS.md per its
 > rule.
 
-When the suite is green and the live demo works:
+When the suite is green and the live demo works, the tool calls are still visible only
+to you, in the Inspector. Put them in front of the student:
 
 > **Prompt 11.2**
+>
+> Can you visualize the tool calls in the conversation history so that end users can
+> better see how tools are used? Suite green, AGENTS.md current.
+
+Reload the chat, ask for two todos in one sentence, and both calls show up in the
+thread. Then wrap the branch up:
+
+> **Prompt 11.3**
 >
 > Commit this on the current branch and open a pull request against main with a
 > description a reviewer can actually use: what changed, how the user id reaches the
@@ -436,6 +445,14 @@ Afterward, comment the line out again and stop the proxy with `docker rm -f mitm
   `TOOL_CALL_START`, `TOOL_CALL_ARGS`, and `TOOL_CALL_RESULT` events appear for each
   call, and the tool-call counter on the agent page finally moves. Say "finished the
   reading" and the checkmark in the sidebar flips.
+- **The events were already in the browser.** `TOOL_CALL_START`, `TOOL_CALL_ARGS`, and
+  `TOOL_CALL_RESULT` ride the same AG-UI stream as the text, which is how the Inspector
+  sees them. Prompt 11.2 adds no traffic, it renders what already arrives. The panel
+  that only you see in step 8 turns into something the student sees. Expect the agent to
+  hang the rendering off CopilotKit's catch-all render for agent tool calls rather than
+  invent a channel of its own. Then decide as a room how much of it to show. The
+  arguments are JSON, and a line saying the tutor put "buy milk" on the list carries
+  more for a student than the arguments object does.
 - **LLM tests are quarantined.** They're non-deterministic and slow, and they cost real
   money on every run, so they get their own npm script and stay out of the default
   suite. How the agent draws the line varies, and any line that keeps the default suite
@@ -452,8 +469,9 @@ Afterward, comment the line out again and stop the proxy with `docker rm -f mitm
   chat completions format and once in AG-UI. Mastra translates between them, and
   Claude Code's own traffic to Anthropic has the same shape with `tool_use` blocks.
 
-**Verify:** the live demo works, the unit tests prove per-user isolation, the default
-e2e suite stays free of LLM calls, and `main` carries the squashed merge.
+**Verify:** the live demo works and the chat shows each tool call, the unit tests prove
+per-user isolation, the default e2e suite stays free of LLM calls, and `main` carries
+the squashed merge.
 
 ## Step 12: quality pass by delegation
 
@@ -480,7 +498,7 @@ git switch -c quality-pass
 > review what came back as if a junior had written it, fix what needs fixing, full suite
 > green, AGENTS.md current. Wait for every worker to finish before you report.
 
-Then prompt 11.2 again, word for word, and merge the pull request the same way. Run
+Then prompt 11.3 again, word for word, and merge the pull request the same way. Run
 `npm run db:seed`, sign in as the demo student, and the list is full.
 
 **Teaching points**
