@@ -52,7 +52,16 @@ Refusals — this matters:
 // reload would leak another libSQL connection (same reason as lib/db.ts).
 const globalForTutor = globalThis as typeof globalThis & {
   mastra?: Mastra<{ [TUTOR_AGENT_ID]: Agent }>;
+  tutorInstructions?: string;
 };
+
+// The Agent below is built once and then survives every hot reload, so handing
+// it the string would pin the prompt to whichever reload created it. Publishing
+// the prompt here instead — this line runs on every re-evaluation — and reading
+// it back per run makes an edit above take effect on save, with no dev-server
+// restart and no second connection. Production evaluates this module once, so
+// the agent resolves the same constant it always did.
+globalForTutor.tutorInstructions = instructions;
 
 function createMastra() {
   const url = process.env.DATABASE_URL;
@@ -71,7 +80,7 @@ function createMastra() {
       [TUTOR_AGENT_ID]: new Agent({
         id: TUTOR_AGENT_ID,
         name: "Bartholomew",
-        instructions,
+        instructions: () => globalForTutor.tutorInstructions ?? instructions,
         // Mastra's model router reads OPENROUTER_API_KEY itself; no AI SDK
         // provider package is involved.
         model: {
